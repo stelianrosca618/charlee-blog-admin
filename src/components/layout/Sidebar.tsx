@@ -30,9 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { icon: Newspaper, label: 'News Articles', path: '/dashboard/news' },
     { icon: Headphones, label: 'Podcasts', path: '/dashboard/podcasts' },
     { icon: Calendar, label: 'Events', path: '/dashboard/events' },
-    { icon: FolderOpen, label: 'Categories', path: '/dashboard/categories' },
-    { icon: Tags, label: 'Tags', path: '/dashboard/tags' },
-    { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
+    // { icon: FolderOpen, label: 'Categories', path: '/dashboard/categories' },
+    // { icon: Tags, label: 'Tags', path: '/dashboard/tags' },
+    // { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
   ];
 
   const isActive = (path: string) => {
@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   };
 
   return (
-    <div className={`bg-white shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} flex flex-col h-screen`}>
+    <div className={`bg-white shadow-lg transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col h-screen`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
