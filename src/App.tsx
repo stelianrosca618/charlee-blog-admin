@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginForm } from './components/auth/LoginForm';
+
 import { DashboardLayout } from './components/layout/DashboardLayout';
 
 // Pages
@@ -18,6 +19,7 @@ import { PodcastList } from './pages/podcasts/PodcastList';
 import { PodcastForm } from './pages/podcasts/PodcastForm';
 import { EventsList } from './pages/events/EventsList';
 import { EventsForm } from './pages/events/EventsForm';
+import { SignupForm } from './components/auth/SignupForm';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +39,7 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginForm />} />
+              <Route path='/signup' element={<SignupForm />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={

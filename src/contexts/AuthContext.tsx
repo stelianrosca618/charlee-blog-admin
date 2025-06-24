@@ -5,6 +5,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  signup: (email: string, password: string, name: string) => Promise<void>; // <-- Add this line
 }
 
 interface AuthAction {
@@ -74,6 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string, remember = false) => {
+
     dispatch({ type: 'LOGIN_START' });
     
     try {
@@ -109,6 +111,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const signup = async (email: string, password: string, name: string) => {
+    dispatch({ type: 'LOGIN_START' });
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Mock: check if email is already taken
+      if (email === 'admin@example.com') {
+        throw new Error('Email already registered');
+      }
+
+      // Mock user creation
+      const user: User = {
+        id: Date.now().toString(),
+        email,
+        name,
+        role: 'editor',
+        avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+        lastLogin: new Date()
+      };
+
+      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+
+      const token = 'mock-jwt-token';
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(user));
+    } catch (error) {
+      dispatch({ type: 'LOGIN_ERROR' });
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
@@ -129,7 +163,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...state,
       login,
       logout,
-      updateUser
+      updateUser,
+      signup // <-- Add this line
     }}>
       {children}
     </AuthContext.Provider>
