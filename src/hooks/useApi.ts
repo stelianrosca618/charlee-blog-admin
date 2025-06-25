@@ -1,10 +1,49 @@
+import axios from 'axios';
 import { useState, useCallback } from 'react';
 
+export const apiPath = 'http://localhost:4000';
 export interface ApiState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
 }
+
+export const userRegister = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/users`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Registration error:', error);
+    throw new Error('Registration failed');
+  }
+};
+
+export const userLogin = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/users/login`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Login error:', error);
+    throw new Error('Login failed');
+  }
+}
+
+export const imageUpload = async (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await axios.post(`${apiPath}/api/files/imageupload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.log('Image upload error:', error);
+    throw new Error('Image upload failed');
+  }
+};
 
 export const useApi = <T>() => {
   const [state, setState] = useState<ApiState<T>>({

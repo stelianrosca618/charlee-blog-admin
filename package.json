@@ -12,6 +12,9 @@
   "dependencies": {
     "@headlessui/react": "^1.7.17",
     "@tanstack/react-query": "^5.8.4",
+    "axios": "^1.10.0",
+    "ckeditor4": "^4.25.1",
+    "ckeditor4-react": "^5.2.1",
     "date-fns": "^2.30.0",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

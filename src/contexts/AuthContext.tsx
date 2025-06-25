@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types';
+import { userLogin, userRegister } from '../hooks/useApi';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
@@ -52,7 +53,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 
 const initialState: AuthState = {
   user: null,
-  isAuthenticated: false,
+  isAuthenticated: true,
   isLoading: false
 };
 
@@ -67,10 +68,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const user = JSON.parse(userData);
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        console.log('Restoring user from localStorage:', user);
       } catch (error) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
+        dispatch({ type: 'LOGOUT' });
       }
+    } else {
+      dispatch({ type: 'LOGOUT' });
     }
   }, []);
 
@@ -80,25 +85,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
-      if (email === 'admin@example.com' && password === 'admin123') {
-        const user: User = {
-          id: '1',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin',
-          avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-          lastLogin: new Date()
-        };
-        
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-        
-        const token = 'mock-jwt-token';
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('userData', JSON.stringify(user));
-        
+      let user = await userLogin({ email: email, password: password });
+      if (user.success) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: user.user });
+        localStorage.setItem('authToken', user.token);
+        localStorage.setItem('userData', JSON.stringify(user.user))
         if (remember) {
           localStorage.setItem('rememberLogin', 'true');
         }
@@ -114,8 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signup = async (email: string, password: string, name: string) => {
     dispatch({ type: 'LOGIN_START' });
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await userRegister({ email: email, password: password, name: name });
 
       // Mock: check if email is already taken
       if (email === 'admin@example.com') {

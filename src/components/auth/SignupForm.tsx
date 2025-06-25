@@ -24,7 +24,7 @@ export const SignupForm: React.FC = () => {
       return;
     }
     try {
-      await signup(data.name, data.email, data.password);
+      await signup(data.email, data.password, data.name);
       toast.success('Account created! Please log in.');
     } catch (error) {
       toast.error('Signup failed');

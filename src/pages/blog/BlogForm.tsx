@@ -13,19 +13,17 @@ import {
   Globe
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { CKEditor } from "ckeditor4-react";
 import toast from 'react-hot-toast';
+import { apiPath, imageUpload } from '../../hooks/useApi';
 
 interface BlogFormData {
   title: string;
   content: string;
   excerpt: string;
-  status: 'draft' | 'published' | 'archived';
-  categories: string[];
-  tags: string[];
   featuredImage?: string;
-  publishedAt?: string;
-  seoTitle?: string;
-  seoDescription?: string;
+  author: string;
+  status: 'draft' | 'published' | 'archived';
   slug: string;
 }
 
@@ -33,17 +31,18 @@ export const BlogForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
-  const [showSeoOptions, setShowSeoOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
+  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BlogFormData>({
     defaultValues: {
       title: '',
       content: '',
       excerpt: '',
+      author: '',
       status: 'draft',
-      categories: [],
-      tags: [],
+      featuredImage: '',
       slug: ''
     }
   });
@@ -62,13 +61,45 @@ export const BlogForm: React.FC = () => {
     }
   }, [watchTitle, setValue, isEditing]);
 
+  // Handle file selection and preview
+  const handleFeaturedImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFeaturedImageFile(file);
+      const uploadFile = await imageUpload(file); // Simulate image upload
+      if (uploadFile.filename) {
+        const fileUrl = `/uploads/images/${uploadFile.filename}`;
+        setFeaturedImagePreview(fileUrl);
+      }
+      setValue('featuredImage', file.name); // You might want to upload and set the URL in real app
+    }
+  };
+
+  // Optionally, revoke object URL on unmount or when file changes
+  React.useEffect(() => {
+    return () => {
+      if (featuredImagePreview) {
+        URL.revokeObjectURL(featuredImagePreview);
+      }
+    };
+  }, [featuredImagePreview]);
+
   const onSubmit = async (data: BlogFormData) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('Saving blog post:', data);
+      // Simulate image upload
+      let uploadedImageUrl = featuredImagePreview;
+      // if (featuredImageFile) {
+      //   // Simulate upload delay
+      //   await new Promise(resolve => setTimeout(resolve, 1000));
+      //   // In a real app, upload the file and get the URL
+      //   uploadedImageUrl = `/uploads/${featuredImageFile.name}`;
+      // }
+
+      // Save post with uploaded image URL
+      const postData = { ...data, featuredImage: uploadedImageUrl };
+      console.log('Saving blog post:', postData);
+
       toast.success(isEditing ? 'Post updated successfully!' : 'Post created successfully!');
       navigate('/dashboard/blog');
     } catch (error) {
@@ -84,22 +115,22 @@ export const BlogForm: React.FC = () => {
   };
 
   // Mock data for categories and tags
-  const availableCategories = [
-    { id: '1', name: 'React', slug: 'react' },
-    { id: '2', name: 'JavaScript', slug: 'javascript' },
-    { id: '3', name: 'TypeScript', slug: 'typescript' },
-    { id: '4', name: 'Web Development', slug: 'web-development' }
-  ];
+  // const availableCategories = [
+  //   { id: '1', name: 'React', slug: 'react' },
+  //   { id: '2', name: 'JavaScript', slug: 'javascript' },
+  //   { id: '3', name: 'TypeScript', slug: 'typescript' },
+  //   { id: '4', name: 'Web Development', slug: 'web-development' }
+  // ];
 
-  const availableTags = [
-    { id: '1', name: 'Tutorial', slug: 'tutorial' },
-    { id: '2', name: 'Guide', slug: 'guide' },
-    { id: '3', name: 'Tips', slug: 'tips' },
-    { id: '4', name: 'Best Practices', slug: 'best-practices' }
-  ];
+  // const availableTags = [
+  //   { id: '1', name: 'Tutorial', slug: 'tutorial' },
+  //   { id: '2', name: 'Guide', slug: 'guide' },
+  //   { id: '3', name: 'Tips', slug: 'tips' },
+  //   { id: '4', name: 'Best Practices', slug: 'best-practices' }
+  // ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full px-8 mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -130,8 +161,7 @@ export const BlogForm: React.FC = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className='lg:col-span-3 space-y-6'>
             {/* Title */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
@@ -146,26 +176,14 @@ export const BlogForm: React.FC = () => {
               {errors.title && (
                 <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
               )}
-            </div>
-
-            {/* Content Editor */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                Content *
-              </label>
-              <textarea
-                {...register('content', { required: 'Content is required' })}
-                rows={20}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Write your blog post content here..."
-              />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
-              )}
-              <p className="mt-2 text-sm text-gray-500">
-                Rich text editor would be integrated here (e.g., TinyMCE, Quill, or Editor.js)
+              <p>
+                <span className="text-sm text-gray-500">Slug: </span>
+                <span className="font-mono text-gray-700">{watch('slug')}</span>
               </p>
             </div>
+          </div>
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
 
             {/* Excerpt */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -182,61 +200,74 @@ export const BlogForm: React.FC = () => {
                 Optional summary that appears in post previews
               </p>
             </div>
-
-            {/* SEO Options */}
+            {/* Content Editor */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <button
-                type="button"
-                onClick={() => setShowSeoOptions(!showSeoOptions)}
-                className="flex items-center text-sm font-medium text-gray-700 mb-4"
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                SEO Options
-                <Plus className={`w-4 h-4 ml-2 transform transition-transform ${showSeoOptions ? 'rotate-45' : ''}`} />
-              </button>
-              
-              {showSeoOptions && (
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                      SEO Title
-                    </label>
-                    <input
-                      {...register('seoTitle')}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Custom title for search engines..."
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                      SEO Description
-                    </label>
-                    <textarea
-                      {...register('seoDescription')}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Meta description for search engines..."
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-                      URL Slug
-                    </label>
-                    <input
-                      {...register('slug', { required: 'Slug is required' })}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="url-friendly-slug"
-                    />
-                  </div>
-                </div>
+              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                Content *
+              </label>
+              <CKEditor
+                data={watch('content')}
+                onChange={(event: any) => {
+                  const html = event.editor.getData();
+                  setValue('content', html, { shouldValidate: true });
+                }}
+              />
+              {errors.content && (
+                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
               )}
+              {/* <textarea
+                {...register('content', { required: 'Content is required' })}
+                rows={20}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Write your blog post content here..."
+              />
+              {errors.content && (
+                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+              )} */}
+              <p className="mt-2 text-sm text-gray-500">
+                Rich text editor would be integrated here (e.g., TinyMCE, Quill, or Editor.js)
+              </p>
             </div>
+
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Featured Image */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900 mb-4">Featured Image</h3>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                {featuredImagePreview ? (
+                  <img
+                    src={`${apiPath}${featuredImagePreview}`}
+                    alt="Preview"
+                    className="mx-auto mb-2 rounded-lg max-h-40 object-contain"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                )}
+                <p className="text-sm text-gray-500 mb-2">Upload featured image</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="featuredImageInput"
+                  onChange={handleFeaturedImageChange}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={() => document.getElementById('featuredImageInput')?.click()}
+                >
+                  Choose File
+                </Button>
+                {featuredImageFile && (
+                  <div className="mt-2 text-xs text-gray-600">{featuredImageFile.name}</div>
+                )}
+              </div>
+            </div>
             {/* Status & Publish */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-sm font-medium text-gray-900 mb-4">Publish Settings</h3>
@@ -256,7 +287,7 @@ export const BlogForm: React.FC = () => {
                   </select>
                 </div>
 
-                {watchStatus === 'published' && (
+                {/* {watchStatus === 'published' && (
                   <div>
                     <label htmlFor="publishedAt" className="block text-sm font-medium text-gray-700 mb-1">
                       Publish Date
@@ -267,70 +298,10 @@ export const BlogForm: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                )}
+                )} */}
               </div>
             </div>
 
-            {/* Featured Image */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Featured Image</h3>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-2">Upload featured image</p>
-                <Button variant="secondary" size="sm">
-                  Choose File
-                </Button>
-              </div>
-            </div>
-
-            {/* Categories */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center">
-                <Folder className="w-4 h-4 mr-2 text-gray-600" />
-                Categories
-              </h3>
-              <div className="space-y-2">
-                {availableCategories.map(category => (
-                  <label key={category.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      value={category.id}
-                      {...register('categories')}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{category.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center">
-                <Hash className="w-4 h-4 mr-2 text-gray-600" />
-                Tags
-              </h3>
-              <div className="space-y-2">
-                {availableTags.map(tag => (
-                  <label key={tag.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      value={tag.id}
-                      {...register('tags')}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{tag.name}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="mt-3">
-                <input
-                  type="text"
-                  placeholder="Add new tag..."
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </form>
