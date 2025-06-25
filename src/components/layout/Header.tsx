@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Search, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBreadcrumbs } from '../../hooks/useBreadcrumbs';
 

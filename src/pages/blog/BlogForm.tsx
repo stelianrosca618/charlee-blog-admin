@@ -5,7 +5,6 @@ import {
   Save, 
   Eye, 
   Upload, 
-  X, 
   Plus,
   Hash,
   Folder,
