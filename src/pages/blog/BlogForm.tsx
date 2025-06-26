@@ -31,6 +31,7 @@ export const BlogForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
+  const [isPreview, setIsPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
@@ -113,8 +114,7 @@ export const BlogForm: React.FC = () => {
   };
 
   const handlePreview = () => {
-    // Open preview in new tab
-    window.open(`/preview/blog/${watch('slug') || 'untitled'}`, '_blank');
+    setIsPreview(isPreview => !isPreview);
   };
 
   // Mock data for categories and tags
@@ -150,7 +150,7 @@ export const BlogForm: React.FC = () => {
             onClick={handlePreview}
             icon={<Eye className="w-4 h-4" />}
           >
-            Preview
+            {isPreview ? 'Hide Preview' : 'Show Preview'}
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
@@ -162,7 +162,7 @@ export const BlogForm: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className={isPreview ? "space-y-6 hidden" : "space-y-6 "}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className='lg:col-span-3 space-y-6'>
             {/* Title */}
@@ -189,13 +189,13 @@ export const BlogForm: React.FC = () => {
           <div className="lg:col-span-2 space-y-6">
 
             {/* Excerpt */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-full">
               <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
                 Excerpt
               </label>
               <textarea
                 {...register('excerpt')}
-                rows={3}
+                rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Brief description of your post..."
               />
@@ -306,6 +306,20 @@ export const BlogForm: React.FC = () => {
           </div>
         </div>
       </form>
+      {isPreview &&
+        <div className='w-full p-2 rounded-lg border border-gray-200'>
+          <div className="prose max-w-none container mx-auto">
+            <h1 className='text-center text-[65px] leading-[71.5px] font-medium'>{watch('title')}</h1>
+            <div className="w-full text-[#0099B0] py-2 flex items-center justify-center">
+              <span className="px-3">3 minute read</span>
+              <span className="px-3 border-l border-l-[#0099B0]">Fri May 30 2025</span>
+              <span className="px-3 border-l border-l-[#0099B0]">By Charlee AI</span>
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: watch('content') }} />
+          </div>
+        </div>
+      }
+
     </div>
   );
 };
