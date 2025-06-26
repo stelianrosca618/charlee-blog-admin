@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { CKEditor } from "ckeditor4-react";
+import JoditEditor from "jodit-react";
 import toast from 'react-hot-toast';
 import { apiPath, imageUpload } from '../../hooks/useApi';
 
@@ -46,6 +47,9 @@ export const BlogForm: React.FC = () => {
       slug: ''
     }
   });
+
+  // Ref for JoditEditor
+  const editorRef = React.useRef(null);
 
   const watchTitle = watch('title');
   const watchStatus = watch('status');
@@ -200,37 +204,7 @@ export const BlogForm: React.FC = () => {
                 Optional summary that appears in post previews
               </p>
             </div>
-            {/* Content Editor */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                Content *
-              </label>
-              <CKEditor
-                data={watch('content')}
-                onChange={(event: any) => {
-                  const html = event.editor.getData();
-                  setValue('content', html, { shouldValidate: true });
-                }}
-              />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
-              )}
-              {/* <textarea
-                {...register('content', { required: 'Content is required' })}
-                rows={20}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Write your blog post content here..."
-              />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
-              )} */}
-              <p className="mt-2 text-sm text-gray-500">
-                Rich text editor would be integrated here (e.g., TinyMCE, Quill, or Editor.js)
-              </p>
-            </div>
-
           </div>
-
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Featured Image */}
@@ -269,9 +243,9 @@ export const BlogForm: React.FC = () => {
               </div>
             </div>
             {/* Status & Publish */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-sm font-medium text-gray-900 mb-4">Publish Settings</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
@@ -286,22 +260,50 @@ export const BlogForm: React.FC = () => {
                     <option value="archived">Archived</option>
                   </select>
                 </div>
-
-                {/* {watchStatus === 'published' && (
-                  <div>
-                    <label htmlFor="publishedAt" className="block text-sm font-medium text-gray-700 mb-1">
-                      Publish Date
-                    </label>
-                    <input
-                      {...register('publishedAt')}
-                      type="datetime-local"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                )} */}
               </div>
-            </div>
+            </div> */}
 
+          </div>
+
+          <div className='lg:col-span-3 space-y-6'>
+            {/* Content Editor */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <JoditEditor
+                ref={editorRef}
+                value={watch('content')}
+                onChange={newContent => setValue('content', newContent, { shouldValidate: true })}
+                config={{
+                  toolbarSticky: false,
+                  toolbarButtonSize: "middle",
+                  showXPathInStatusbar: false,
+                  askBeforePasteHTML: false,
+                  askBeforePasteFromWord: false
+                }}
+              />
+              {/*
+              <CKEditor
+                data={watch('content')}
+                onChange={(event: any) => {
+                  const html = event.editor.getData();
+                  setValue('content', html, { shouldValidate: true });
+                }}
+              /> */}
+              {errors.content && (
+                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+              )}
+              {/* <textarea
+                {...register('content', { required: 'Content is required' })}
+                rows={20}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Write your blog post content here..."
+              />
+              {errors.content && (
+                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+              )} */}
+              <p className="mt-2 text-sm text-gray-500">
+                Rich text editor would be integrated here (e.g., TinyMCE, Quill, or Editor.js)
+              </p>
+            </div>
           </div>
         </div>
       </form>
