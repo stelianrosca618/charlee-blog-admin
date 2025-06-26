@@ -4,8 +4,6 @@ import {
   Newspaper, 
   Headphones, 
   Calendar, 
-  Users, 
-  Eye,
   TrendingUp,
   Clock
 } from 'lucide-react';
