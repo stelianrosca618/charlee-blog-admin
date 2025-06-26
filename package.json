@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "@ckeditor/ckeditor5-react": "^9.5.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@headlessui/react": "^1.7.17",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
     "@tanstack/react-query": "^5.8.4",
     "axios": "^1.10.0",
     "ckeditor4": "^4.25.1",
