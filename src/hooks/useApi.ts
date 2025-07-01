@@ -45,6 +45,58 @@ export const imageUpload = async (file: File) => {
   }
 };
 
+export const createBlog = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/blogs`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Create blog error:', error);
+    throw new Error('Create blog failed');
+  }
+}
+
+export const updateBlog = async (id: string, data: any) => {
+  try {
+    const response = await axios.put(`${apiPath}/api/blogs/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Update blog error:', error);
+    throw new Error('Update blog failed');
+  }
+}
+
+export const deleteBlog = async (id: string) => {
+  try {
+    const response = await axios.delete(`${apiPath}/api/blogs/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Delete blog error:', error);
+    throw new Error('Delete blog failed');
+  }
+}
+
+export const getAllBlogs = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/blogs`);
+    return response.data;
+  } catch (error) {
+    console.log('Get all blogs error:', error);
+    throw new Error('Failed to fetch blogs');
+
+  }
+}
+
+export const getBlogById = async (id: string) => {
+  try {
+    const response = await axios.get(`${apiPath}/api/blogs/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Get blog by ID error:', error);
+    throw new Error('Failed to fetch blog');
+
+  }
+}
+
 export const useApi = <T>() => {
   const [state, setState] = useState<ApiState<T>>({
     data: null,

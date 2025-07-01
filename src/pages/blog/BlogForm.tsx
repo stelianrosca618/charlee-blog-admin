@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { Box, Container, Divider } from "@mui/material"
 import { 
   Save, 
   Eye, 
@@ -13,10 +14,9 @@ import {
   Globe
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { CKEditor } from "ckeditor4-react";
-import JoditEditor from "jodit-react";
+import JoditEditor, { Jodit } from "jodit-react";
 import toast from 'react-hot-toast';
-import { apiPath, imageUpload } from '../../hooks/useApi';
+import { apiPath, createBlog, getBlogById, imageUpload, updateBlog } from '../../hooks/useApi';
 
 interface BlogFormData {
   title: string;
@@ -24,8 +24,9 @@ interface BlogFormData {
   excerpt: string;
   featuredImage?: string;
   author: string;
-  status: 'draft' | 'published' | 'archived';
+  status: string;
   slug: string;
+  createdDate: string;
 }
 
 export const BlogForm: React.FC = () => {
@@ -36,7 +37,7 @@ export const BlogForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
-
+  const [editorContent, setEditorContent] = useState('');
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BlogFormData>({
     defaultValues: {
       title: '',
@@ -45,13 +46,75 @@ export const BlogForm: React.FC = () => {
       author: '',
       status: 'draft',
       featuredImage: '',
-      slug: ''
+      slug: '',
+      createdDate: new Date().toISOString() // Default to today's date
     }
   });
 
-  // Ref for JoditEditor
-  const editorRef = React.useRef(null);
+  useEffect(() => {
+    if (isEditing) {
+      // Fetch blog post data and populate form
+      const fetchBlogPost = async () => {
+        try {
+          const data = await getBlogById(id as string);
+          console.log('Fetched blog post data:', data);
+          setValue('title', data.Title);
+          setValue('content', data.Body);
+          setValue('excerpt', data.Description);
+          setValue('author', data.Author);
+          setValue('status', data.Status);
+          setValue('featuredImage', data.Graphic1);
+          setValue('slug', data.Relevance);
+          setValue('createdDate', data.createdDate);
+          setEditorContent(data.Body);
+          setFeaturedImagePreview(data.Graphic1);
+        } catch (error) {
+          console.error('Error fetching blog post:', error);
+        }
+      };
 
+      fetchBlogPost();
+    }
+  }, [id]); // Placeholder for any side effects
+  // Ref for JoditEditor
+  const editorRef = React.useRef<any>(null);
+  const editorCofig = {
+    toolbarSticky: false,
+    toolbarButtonSize: "middle" as "middle",
+    showXPathInStatusbar: false,
+    askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
+    uploader: {
+      insertImageAsBase64URI: false,
+      url: `${apiPath}/api/files/uploadEditImages`,
+      format: 'json',
+      filesVariableName: () => 'files[]',
+      isSuccess: (res: any) => {
+        console.log('Jodit upload response:', res);
+        return res && (res.status === 'success' || res.success === true);
+      },
+      getMessage: (res: any) => res && res.message ? res.message : 'Image uploaded successfully',
+      process: (resp: any) => {
+        if (resp.files && resp.files[0]) {
+          const imageUrl = resp.files[0];
+          return {
+            files: [imageUrl],
+            isImages: [true],
+            baseurl: apiPath,
+          }
+        }
+
+        return {};
+        // return { images: [] };
+      }
+    },
+
+    events: {
+      afterInsertImage: function (image: HTMLImageElement) {
+        image.setAttribute('crossorigin', 'anonymous');
+      }
+    }
+  }
   const watchTitle = watch('title');
   const watchStatus = watch('status');
 
@@ -88,22 +151,49 @@ export const BlogForm: React.FC = () => {
       }
     };
   }, [featuredImagePreview]);
+  const renderBlogDate = (date_str: string) => {
 
+    const dateStr = new Date(date_str);
+    console.log('renderBlogDate', date_str);
+    return dateStr.toDateString();
+  }
   const onSubmit = async (data: BlogFormData) => {
     setIsSubmitting(true);
     try {
       // Simulate image upload
       let uploadedImageUrl = featuredImagePreview;
-      // if (featuredImageFile) {
-      //   // Simulate upload delay
-      //   await new Promise(resolve => setTimeout(resolve, 1000));
-      //   // In a real app, upload the file and get the URL
-      //   uploadedImageUrl = `/uploads/${featuredImageFile.name}`;
-      // }
+      if (featuredImageFile && !uploadedImageUrl) {
+        toast.error('Please upload a valid image file.');
+        return;
+      }
 
       // Save post with uploaded image URL
-      const postData = { ...data, featuredImage: uploadedImageUrl };
-      console.log('Saving blog post:', postData);
+      // const postData = { ...data, featuredImage: uploadedImageUrl };
+
+      const postData = {
+        Content_Type: 'blog',
+        Description: data.excerpt,
+        Title: data.title,
+        Graphic1: uploadedImageUrl,
+        Graphic2: '',
+        Body: data.content,
+        Author: 'Charlee AI',
+        AuthorTitle: 'Charlee AI',
+        AuthorCompany: 'Charlee AI',
+        DateWritten: new Date(),
+        Relevance: data.slug,
+        Status: 'Active',
+        LastUpdated: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        LastUpdatedBy: 'Charlee AI',
+        PDFVersion: ''
+      }
+      if (isEditing) {
+        await updateBlog(id!, postData);
+      } else {
+
+        await createBlog(postData);
+        console.log('Saving blog post:', postData);
+      }
 
       toast.success(isEditing ? 'Post updated successfully!' : 'Post created successfully!');
       navigate('/dashboard/blog');
@@ -117,21 +207,6 @@ export const BlogForm: React.FC = () => {
   const handlePreview = () => {
     setIsPreview(isPreview => !isPreview);
   };
-
-  // Mock data for categories and tags
-  // const availableCategories = [
-  //   { id: '1', name: 'React', slug: 'react' },
-  //   { id: '2', name: 'JavaScript', slug: 'javascript' },
-  //   { id: '3', name: 'TypeScript', slug: 'typescript' },
-  //   { id: '4', name: 'Web Development', slug: 'web-development' }
-  // ];
-
-  // const availableTags = [
-  //   { id: '1', name: 'Tutorial', slug: 'tutorial' },
-  //   { id: '2', name: 'Guide', slug: 'guide' },
-  //   { id: '3', name: 'Tips', slug: 'tips' },
-  //   { id: '4', name: 'Best Practices', slug: 'best-practices' }
-  // ];
 
   return (
     <div className="w-full px-8 mx-auto space-y-6">
@@ -242,27 +317,6 @@ export const BlogForm: React.FC = () => {
                 )}
               </div>
             </div>
-            {/* Status & Publish */}
-            {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Publish Settings</h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    {...register('status')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-              </div>
-            </div> */}
-
           </div>
 
           <div className='lg:col-span-3 space-y-6'>
@@ -270,36 +324,17 @@ export const BlogForm: React.FC = () => {
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <JoditEditor
                 ref={editorRef}
-                value={watch('content')}
-                onChange={newContent => setValue('content', newContent, { shouldValidate: true })}
-                config={{
-                  toolbarSticky: false,
-                  toolbarButtonSize: "middle",
-                  showXPathInStatusbar: false,
-                  askBeforePasteHTML: false,
-                  askBeforePasteFromWord: false
+                value={editorContent}
+                onChange={newContent => {
+                  // setEditorContent(newContent);
+                  setValue('content', newContent)
                 }}
+                config={editorCofig}
               />
-              {/*
-              <CKEditor
-                data={watch('content')}
-                onChange={(event: any) => {
-                  const html = event.editor.getData();
-                  setValue('content', html, { shouldValidate: true });
-                }}
-              /> */}
               {errors.content && (
                 <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
               )}
-              {/* <textarea
-                {...register('content', { required: 'Content is required' })}
-                rows={20}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Write your blog post content here..."
-              />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
-              )} */}
+
               <p className="mt-2 text-sm text-gray-500">
                 Rich text editor would be integrated here (e.g., TinyMCE, Quill, or Editor.js)
               </p>
@@ -309,15 +344,29 @@ export const BlogForm: React.FC = () => {
       </form>
       {isPreview &&
         <div className='w-full p-2 rounded-lg border border-gray-200'>
-          <div className="prose max-w-none container mx-auto">
-            <h1 className='text-center text-[65px] leading-[71.5px] font-medium'>{watch('title')}</h1>
-            <div className="w-full text-[#0099B0] py-2 flex items-center justify-center">
-              <span className="px-3">3 minute read</span>
-              <span className="px-3 border-l border-l-[#0099B0]">Fri May 30 2025</span>
-              <span className="px-3 border-l border-l-[#0099B0]">By Charlee AI</span>
-            </div>
-            <div dangerouslySetInnerHTML={{ __html: watch('content') }} />
-          </div>
+          <Box className="w-full">
+            <Container maxWidth="md">
+              <h1 className='text-center text-[65px] leading-[71.5px] font-medium'>{watch('title')}</h1>
+              <Box className="w-full text-[#0099B0] " paddingY={1} display={"flex"} justifyContent={"center"} alignItems={"center"}>
+                <span className="px-3">
+                  3 minute read
+                </span>
+                <span className="px-3 border-l border-l-[#0099B0]">
+                  {renderBlogDate(watch('createdDate'))}
+                </span>
+                <span className="px-3 border-l border-l-[#0099B0]">
+                  By Charlee AI
+                </span>
+              </Box>
+              <div className="w-full py-10 text-left">
+                {featuredImagePreview &&
+                  <img src={`${apiPath}${featuredImagePreview}`} alt="Featured" className="w-full h-auto rounded-lg mb-4" crossOrigin="anonymous" />
+                }
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: watch('content') }} />
+              </div>
+
+            </Container>
+          </Box>
         </div>
       }
 

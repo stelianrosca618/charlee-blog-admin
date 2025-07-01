@@ -18,8 +18,8 @@ export interface BlogPost {
   title: string;
   content: string;
   excerpt: string;
-  status: 'draft' | 'published' | 'archived';
-  author: User;
+  status: string;
+  author: string;
   categories: Category[];
   tags: Tag[];
   featuredImage?: string;
