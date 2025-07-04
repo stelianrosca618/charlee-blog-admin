@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import toast from 'react-hot-toast';
@@ -33,7 +33,7 @@ export const LoginForm: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Lock className="h-6 w-6 text-white" />
+            <Shield className="h-6 w-6 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">Admin Portal</h2>
           <p className="mt-2 text-sm text-gray-600">
