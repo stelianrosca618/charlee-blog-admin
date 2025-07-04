@@ -28,6 +28,23 @@ export const userLogin = async (data: any) => {
   }
 }
 
+export const pdfUpload = async (file: File) => {
+  const formData = new FormData();
+  formData.append('pdf', file);
+
+  try {
+    const response = await axios.post(`${apiPath}/api/files/pdfupload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.log('PDF upload error:', error);
+    throw new Error('PDF upload failed');
+  }
+};
+
 export const imageUpload = async (file: File) => {
   const formData = new FormData();
   formData.append('image', file);
@@ -97,6 +114,55 @@ export const getBlogById = async (id: string) => {
   }
 }
 
+export const createNews = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/news`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Create New Error', error);
+    throw new Error('Create News failed');
+  }
+}
+
+export const updateNews = async (id: string, data: any) => {
+  try {
+    const response = await axios.put(`${apiPath}/api/news/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Update News Error', error);
+    throw new Error('Update News failed');
+  }
+}
+
+export const deleteNews = async (id: string) => {
+  try {
+    const response = await axios.delete(`${apiPath}/api/news/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Delete News Error', error);
+    throw new Error('Delete News failed');
+  }
+}
+
+export const getNewsById = async (id: string) => {
+  try {
+    const response = await axios.get(`${apiPath}/api/news/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Get News by ID Error', error);
+    throw new Error('Get News by ID failed');
+  }
+}
+
+export const getAllNews = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/news`);
+    return response.data;
+  } catch (error) {
+    console.log('Get all News Error', error);
+    throw new Error('Get all News failed');
+  }
+}
 export const useApi = <T>() => {
   const [state, setState] = useState<ApiState<T>>({
     data: null,

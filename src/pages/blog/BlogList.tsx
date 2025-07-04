@@ -12,7 +12,8 @@ import {
   User,
   Tag,
   FileText,
-  RotateCcw
+  RotateCcw,
+  SearchIcon
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -129,12 +130,12 @@ export const BlogList: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => { onhandleSearch() }} variant="secondary" icon={<Filter className="w-4 h-4" />}>
+            <Button onClick={() => { onhandleSearch() }} variant="secondary" icon={<SearchIcon className="w-4 h-4" />}>
               Search Blogs
             </Button>
-            <Button icon={<RotateCcw className="w-4 h-4" />} variant="secondary" onClick={() => { reloadBlogs() }}>
-              <span className="sr-only">Reload</span>
-            </Button>
+            <button className='bg-slate-300 p-3 rounded-lg' onClick={() => { reloadBlogs() }}>
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

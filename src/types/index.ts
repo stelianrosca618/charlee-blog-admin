@@ -36,18 +36,13 @@ export interface NewsArticle {
   title: string;
   content: string;
   excerpt: string;
-  status: 'draft' | 'published' | 'archived';
-  author: User;
+  status: string;
   source: string;
-  priority: 'low' | 'medium' | 'high' | 'breaking';
-  categories: Category[];
-  tags: Tag[];
   featuredImage?: string;
   publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   seoTitle?: string;
-  seoDescription?: string;
   slug: string;
 }
 

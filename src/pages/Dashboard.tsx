@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Clock
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const stats = [
@@ -150,10 +151,13 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-4">
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 group">
-              <FileText className="w-6 h-6 text-gray-400 group-hover:text-indigo-600 mx-auto mb-2" />
-              <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">New Blog Post</span>
-            </button>
+
+            <Link to="/dashboard/blog/new">
+              <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 group">
+                <FileText className="w-6 h-6 text-gray-400 group-hover:text-indigo-600 mx-auto mb-2" />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">New Blog Post</span>
+              </button>
+            </Link>
             <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 group">
               <Newspaper className="w-6 h-6 text-gray-400 group-hover:text-green-600 mx-auto mb-2" />
               <span className="text-sm font-medium text-gray-600 group-hover:text-green-600">New Article</span>
