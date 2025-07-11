@@ -49,20 +49,19 @@ export interface NewsArticle {
 export interface PodcastEpisode {
   id: string;
   title: string;
-  description: string;
-  audioUrl: string;
-  duration: number;
-  status: 'draft' | 'published' | 'archived';
-  series: PodcastSeries;
-  episodeNumber: number;
-  seasonNumber?: number;
-  showNotes: string;
-  transcript?: string;
+  content: string;
+  excerpt: string;
+  status: string;
+  author: string;
+  categories: Category[];
+  tags: Tag[];
   featuredImage?: string;
   publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  tags: Tag[];
+  seoTitle?: string;
+  seoDescription?: string;
+  slug: string;
 }
 
 export interface PodcastSeries {
@@ -76,22 +75,21 @@ export interface PodcastSeries {
 
 export interface Event {
   id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  location: string;
-  address?: string;
-  capacity?: number;
-  registeredCount: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  categories: Category[];
-  tags: Tag[];
-  featuredImage?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  seoTitle?: string;
-  seoDescription?: string;
+  title: string;                // Title (mediumtext, NOT NULL)
+  graphic1?: string;            // Graphic1 (longtext, image URL or base64)
+  event_path?: string;
+  address?: string;             // Address (varchar(100), nullable)
+  country?: string;             // Country (varchar(50), nullable)
+  city?: string;                // City (varchar(50), nullable)
+  state?: string;               // State (varchar(50), nullable)
+  zip?: string;                 // Zip (varchar(10), nullable)
+  phone: string;               // Phone (varchar(20), nullable)
+  startDate: string;            // StartDate (date, NOT NULL, use yyyy-MM-dd)
+  endDate?: string;             // EndDate (date, nullable, use yyyy-MM-dd)
+  slug?: string;                // Slug (mediumtext)
+  status: string;               // Status (varchar(25), NOT NULL)
+  lastUpdated: string;          // LastUpdated (date, NOT NULL, use yyyy-MM-dd)
+  lastUpdatedBy: string;        // LastUpdatedBy (varchar(50), NOT NULL)
 }
 
 export interface Category {

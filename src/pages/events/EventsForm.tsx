@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { 
   Save, 
   Eye, 
   Upload, 
+
   Plus,
   Hash,
   Folder,
@@ -17,25 +18,24 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import toast from 'react-hot-toast';
+import { apiPath, createEvent, getEventById, imageUpload, updateEvent } from '../../hooks/useApi';
 
 interface EventFormData {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  address?: string;
-  capacity?: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  categories: string[];
-  tags: string[];
-  featuredImage?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  registrationRequired: boolean;
-  registrationDeadline?: string;
-  price?: number;
-  currency: string;
+  title: string;                // Title (mediumtext, NOT NULL)
+  graphic1?: string;            // Graphic1 (longtext, image URL or base64)
+  event_path?: string;
+  address?: string;             // Address (varchar(100), nullable)
+  country?: string;             // Country (varchar(50), nullable)
+  city?: string;                // City (varchar(50), nullable)
+  state?: string;               // State (varchar(50), nullable)
+  zip?: string;                 // Zip (varchar(10), nullable)
+  phone: string;               // Phone (varchar(20), nullable)
+  startDate: string;            // StartDate (date, NOT NULL, use yyyy-MM-dd)
+  endDate?: string;             // EndDate (date, nullable, use yyyy-MM-dd)
+  slug?: string;                // Slug (mediumtext)
+  status: string;               // Status (varchar(25), NOT NULL)
+  lastUpdated: string;          // LastUpdated (date, NOT NULL, use yyyy-MM-dd)
+  lastUpdatedBy: string;        // LastUpdatedBy (varchar(50), NOT NULL)
 }
 
 export const EventsForm: React.FC = () => {
@@ -45,35 +45,130 @@ export const EventsForm: React.FC = () => {
   const [showSeoOptions, setShowSeoOptions] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
+  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
     defaultValues: {
       title: '',
-      description: '',
+      graphic1: '',
+      event_path: '',
+      address: '',
+      country: '',
+      city: '',
+      state: '',
+      zip: '',
+      phone: '',
       startDate: '',
       endDate: '',
-      location: '',
-      address: '',
-      capacity: undefined,
+      slug: '',
       status: 'upcoming',
-      categories: [],
-      tags: [],
-      registrationRequired: true,
-      registrationDeadline: '',
-      price: 0,
-      currency: 'USD'
+      lastUpdated: '',
+      lastUpdatedBy: ''
     }
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      const fetchEvent = async () => {
+        try {
+          const eventData = await getEventById(id!); // Simulate API call
+          if (eventData) {
+            setValue('title', eventData.Title);
+            setValue('graphic1', eventData.Graphic1);
+            setValue('event_path', eventData.EventPath);
+            setValue('address', eventData.Address || '');
+            setValue('country', eventData.Country || '');
+            setValue('city', eventData.City || '');
+            setValue('state', eventData.State || '');
+            setValue('zip', eventData.Zip || '');
+            setValue('phone', eventData.Phone);
+            setValue('startDate', eventData.StartDate ? new Date(eventData.StartDate).toISOString().split('T')[0] : '');
+            setValue('endDate', eventData.EndDate ? new Date(eventData.EndDate).toISOString().split('T')[0] : '');
+            setValue('slug', eventData.Relevance);
+            setValue('status', eventData.Status);
+            setValue('lastUpdated', new Date(eventData.LastUpdated).toISOString().split('T')[0]);
+            setValue('lastUpdatedBy', eventData.LastUpdatedBy);
+
+            if (eventData.Graphic1) {
+              setFeaturedImagePreview(eventData.Graphic1);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching event:', error);
+          toast.error('Failed to load event data.');
+        }
+      }
+      fetchEvent();
+    }
+  }, [id])
+
   const watchStartDate = watch('startDate');
-  const watchRegistrationRequired = watch('registrationRequired');
-  const watchPrice = watch('price');
+  const watchEndDate = watch('endDate');
+  const watchTitle = watch('title');
+  React.useEffect(() => {
+    if (watchTitle && !isEditing) {
+      const slug = watchTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      setValue('slug', slug);
+    }
+  }, [watchTitle, setValue, isEditing]);
+
+  const handleFeaturedImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFeaturedImageFile(file);
+      const uploadFile = await imageUpload(file); // Simulate image upload
+      if (uploadFile.filename) {
+        const fileUrl = `/uploads/images/${uploadFile.filename}`;
+        setFeaturedImagePreview(fileUrl);
+      }
+      setValue('graphic1', file.name); // You might want to upload and set the URL in real app
+    }
+  };
 
   const onSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      let uploadedImageUrl = featuredImagePreview;
+      if (featuredImageFile && !uploadedImageUrl) {
+        toast.error('Please upload a valid image file.');
+        return;
+      }
+
+      const eventData = {
+        ContentType: 'event',
+        Description: '',
+        Title: data.title,
+        Graphic1: uploadedImageUrl,
+        Graphic2: null,
+        Body: null,
+        EventPath: data.event_path,
+        Phone: data.phone,
+        Address: data.address,
+        Country: data.country,
+        City: data.city,
+        State: data.state,
+        Zip: data.zip,
+        StartDate: data.startDate,
+        EndDate: data.endDate,
+        Relevance: data.slug,
+        Status: data.status,
+        LastUpdated: data.lastUpdated,
+        LastUpdatedBy: 'Charlee AI'
+      }
+      if (isEditing) {
+        if (!id) {
+          throw new Error('Event ID is required for updating an event.');
+        }
+        await updateEvent(id, eventData); // Simulate API call
+      } else {
+        await createEvent(eventData); // Simulate API call
+      }
+
+      // await new Promise(resolve => setTimeout(resolve, 1500));
+
       console.log('Saving event:', data);
       toast.success(isEditing ? 'Event updated successfully!' : 'Event created successfully!');
       navigate('/dashboard/events');
@@ -88,27 +183,9 @@ export const EventsForm: React.FC = () => {
     window.open(`/preview/event/${id || 'new'}`, '_blank');
   };
 
-  // Mock data for categories and tags
-  const availableCategories = [
-    { id: '1', name: 'Workshop', slug: 'workshop' },
-    { id: '2', name: 'Conference', slug: 'conference' },
-    { id: '3', name: 'Meetup', slug: 'meetup' },
-    { id: '4', name: 'Webinar', slug: 'webinar' },
-    { id: '5', name: 'Competition', slug: 'competition' },
-    { id: '6', name: 'Networking', slug: 'networking' }
-  ];
-
-  const availableTags = [
-    { id: '1', name: 'Technology', slug: 'technology' },
-    { id: '2', name: 'Business', slug: 'business' },
-    { id: '3', name: 'Design', slug: 'design' },
-    { id: '4', name: 'Marketing', slug: 'marketing' },
-    { id: '5', name: 'Startup', slug: 'startup' },
-    { id: '6', name: 'Education', slug: 'education' }
-  ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -159,20 +236,29 @@ export const EventsForm: React.FC = () => {
                   {errors.title && (
                     <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
                   )}
+                  <p>
+                    <span className="text-sm text-gray-500">Slug: </span>
+                    <span className="font-mono text-gray-700">{watch('slug')}</span>
+                  </p>
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                    Event Description *
+                  <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
+                    Website *
                   </label>
-                  <textarea
-                    {...register('description', { required: 'Description is required' })}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Describe your event, what attendees can expect..."
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                  <div className="relative flex rounded-lg shadow-sm">
+                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                      <Globe className="w-4 h-4" />
+                    </span>
+                    <input
+                      {...register('event_path', { required: 'Website is required' })}
+                      type="url"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="https://your-event-website.com"
+                    />
+                  </div>
+                  {errors.event_path && (
+                    <p className="mt-1 text-sm text-red-600">{errors.event_path.message}</p>
                   )}
                 </div>
               </div>
@@ -192,7 +278,7 @@ export const EventsForm: React.FC = () => {
                   </label>
                   <input
                     {...register('startDate', { required: 'Start date is required' })}
-                    type="datetime-local"
+                    type="date"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   {errors.startDate && (
@@ -206,7 +292,7 @@ export const EventsForm: React.FC = () => {
                   </label>
                   <input
                     {...register('endDate', { required: 'End date is required' })}
-                    type="datetime-local"
+                    type="date"
                     min={watchStartDate}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
@@ -223,252 +309,120 @@ export const EventsForm: React.FC = () => {
                 <MapPin className="w-5 h-5 mr-2 text-gray-600" />
                 Location
               </h3>
-              
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                    Venue Name *
-                  </label>
-                  <input
-                    {...register('location', { required: 'Location is required' })}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="e.g., Tech Hub Conference Center"
-                  />
-                  {errors.location && (
-                    <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
-                  )}
-                </div>
-
                 <div>
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Address
+                    Address
                   </label>
-                  <textarea
-                    {...register('address')}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Street address, city, state, zip code"
-                  />
-                  <p className="mt-1 text-sm text-gray-500">
-                    Full address helps attendees find your event location
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Registration & Pricing */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-gray-600" />
-                Registration & Pricing
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center">
                   <input
-                    {...register('registrationRequired')}
-                    type="checkbox"
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    {...register('address')}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Street address"
                   />
-                  <label className="ml-2 text-sm text-gray-700">
-                    Registration required for this event
-                  </label>
                 </div>
-
-                {watchRegistrationRequired && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="capacity" className="block text-sm font-medium text-gray-700 mb-1">
-                          Maximum Capacity
-                        </label>
-                        <input
-                          {...register('capacity', { valueAsNumber: true, min: 1 })}
-                          type="number"
-                          min="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          placeholder="e.g., 100"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="registrationDeadline" className="block text-sm font-medium text-gray-700 mb-1">
-                          Registration Deadline
-                        </label>
-                        <input
-                          {...register('registrationDeadline')}
-                          type="datetime-local"
-                          max={watchStartDate}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                          Ticket Price
-                        </label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            {...register('price', { valueAsNumber: true, min: 0 })}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        {watchPrice === 0 && (
-                          <p className="mt-1 text-sm text-green-600">Free event</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency
-                        </label>
-                        <select
-                          {...register('currency')}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="CAD">CAD</option>
-                        </select>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* SEO Options */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <button
-                type="button"
-                onClick={() => setShowSeoOptions(!showSeoOptions)}
-                className="flex items-center text-sm font-medium text-gray-700 mb-4"
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                SEO Options
-                <Plus className={`w-4 h-4 ml-2 transform transition-transform ${showSeoOptions ? 'rotate-45' : ''}`} />
-              </button>
-              
-              {showSeoOptions && (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                      SEO Title
+                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
                     </label>
                     <input
-                      {...register('seoTitle')}
+                      {...register('country')}
                       type="text"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Custom title for search engines..."
+                      placeholder="Country"
                     />
                   </div>
                   <div>
-                    <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                      SEO Description
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                      City
                     </label>
-                    <textarea
-                      {...register('seoDescription')}
-                      rows={2}
+                    <input
+                      {...register('city')}
+                      type="text"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Meta description for search engines..."
+                      placeholder="City"
                     />
                   </div>
                 </div>
-              )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <input
+                      {...register('state')}
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="State"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="zip" className="block text-sm font-medium text-gray-700 mb-1">
+                      Zip
+                    </label>
+                    <input
+                      {...register('zip')}
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Zip code"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Status */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Event Status</h3>
-              
-              <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                  Current Status
-                </label>
-                <select
-                  {...register('status')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="upcoming">Upcoming</option>
-                  <option value="ongoing">Ongoing</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
             {/* Featured Image */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-sm font-medium text-gray-900 mb-4">Event Image</h3>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                {featuredImagePreview ? (
+                  <img
+                    src={`${apiPath}${featuredImagePreview}`}
+                    alt="Preview"
+                    className="mx-auto mb-2 rounded-lg max-h-40 object-contain"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                )}
                 <p className="text-sm text-gray-500 mb-2">Upload event image</p>
-                <Button variant="secondary" size="sm">
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="featuredImageInput"
+                  onChange={handleFeaturedImageChange}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={() => document.getElementById('featuredImageInput')?.click()}
+                >
                   Choose File
                 </Button>
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Recommended: 1200x630px for optimal social media sharing
-              </p>
-            </div>
-
-            {/* Categories */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center">
-                <Folder className="w-4 h-4 mr-2 text-gray-600" />
-                Categories
-              </h3>
-              <div className="space-y-2">
-                {availableCategories.map(category => (
-                  <label key={category.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      value={category.id}
-                      {...register('categories')}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{category.name}</span>
-                  </label>
-                ))}
+                {featuredImageFile && (
+                  <div className="mt-2 text-xs text-gray-600">{featuredImageFile.name}</div>
+                )}
               </div>
             </div>
-
-            {/* Tags */}
+            {/* Phone number */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center">
-                <Hash className="w-4 h-4 mr-2 text-gray-600" />
-                Tags
-              </h3>
-              <div className="space-y-2">
-                {availableTags.map(tag => (
-                  <label key={tag.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      value={tag.id}
-                      {...register('tags')}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{tag.name}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="mt-3">
+              <h3 className="text-sm font-medium text-gray-900 mb-4">Phone Number</h3>
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
                 <input
-                  type="text"
-                  placeholder="Add new tag..."
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  {...register('phone')}
+                  type="tel"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter phone number..."
                 />
               </div>
             </div>

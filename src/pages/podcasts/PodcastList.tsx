@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -13,12 +13,15 @@ import {
   User,
   Clock,
   Headphones,
-  Volume2
+  Volume2,
+  SearchIcon,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PodcastEpisode } from '../../types';
 import { format } from 'date-fns';
+import { apiPath, deletePodcast, getAllPodcasts } from '../../hooks/useApi';
 
 export const PodcastList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,92 +33,131 @@ export const PodcastList: React.FC = () => {
     isOpen: false
   });
 
-  // Mock data - replace with actual API call
-  const podcastEpisodes: PodcastEpisode[] = [
-    {
-      id: '1',
-      title: 'The Future of Web Development: Trends for 2024',
-      description: 'Join us as we explore the latest trends and technologies shaping web development in 2024.',
-      audioUrl: 'https://example.com/audio/episode-1.mp3',
-      duration: 3420, // 57 minutes in seconds
-      status: 'published',
-      series: {
-        id: '1',
-        name: 'Tech Talk Weekly',
-        description: 'Weekly discussions about technology trends',
-        coverImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
-        isActive: true,
-        createdAt: new Date('2023-01-01')
-      },
-      episodeNumber: 15,
-      seasonNumber: 2,
-      showNotes: 'In this episode, we discuss...',
-      transcript: 'Welcome to Tech Talk Weekly...',
-      featuredImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
-      publishedAt: new Date('2024-01-15T10:00:00'),
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-15'),
-      tags: [
-        { id: '1', name: 'Web Development', slug: 'web-development', color: '#3B82F6', usageCount: 25, createdAt: new Date() },
-        { id: '2', name: 'Technology', slug: 'technology', color: '#8B5CF6', usageCount: 30, createdAt: new Date() }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Building Scalable React Applications',
-      description: 'Deep dive into best practices for building large-scale React applications.',
-      audioUrl: 'https://example.com/audio/episode-2.mp3',
-      duration: 2880, // 48 minutes in seconds
-      status: 'draft',
-      series: {
-        id: '1',
-        name: 'Tech Talk Weekly',
-        description: 'Weekly discussions about technology trends',
-        coverImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
-        isActive: true,
-        createdAt: new Date('2023-01-01')
-      },
-      episodeNumber: 16,
-      seasonNumber: 2,
-      showNotes: 'In this episode, we explore...',
-      featuredImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
-      publishedAt: undefined,
-      createdAt: new Date('2024-01-20'),
-      updatedAt: new Date('2024-01-22'),
-      tags: [
-        { id: '3', name: 'React', slug: 'react', color: '#06B6D4', usageCount: 20, createdAt: new Date() },
-        { id: '4', name: 'JavaScript', slug: 'javascript', color: '#F59E0B', usageCount: 35, createdAt: new Date() }
-      ]
-    },
-    {
-      id: '3',
-      title: 'Interview: AI in Software Development',
-      description: 'Exclusive interview with industry experts about AI tools in software development.',
-      audioUrl: 'https://example.com/audio/episode-3.mp3',
-      duration: 4200, // 70 minutes in seconds
-      status: 'published',
-      series: {
-        id: '2',
-        name: 'Developer Insights',
-        description: 'Interviews with industry professionals',
-        coverImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
-        isActive: true,
-        createdAt: new Date('2023-06-01')
-      },
-      episodeNumber: 8,
-      seasonNumber: 1,
-      showNotes: 'Special interview episode...',
-      transcript: 'Today we have a special guest...',
-      featuredImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
-      publishedAt: new Date('2024-01-12T14:00:00'),
-      createdAt: new Date('2024-01-08'),
-      updatedAt: new Date('2024-01-12'),
-      tags: [
-        { id: '5', name: 'AI', slug: 'ai', color: '#8B5CF6', usageCount: 15, createdAt: new Date() },
-        { id: '6', name: 'Interview', slug: 'interview', color: '#10B981', usageCount: 12, createdAt: new Date() }
-      ]
+  const [podcastEpisodes, setPodcastEpisodes] = useState<PodcastEpisode[]>([]);
+  const [filteredEpisodes, setFilteredEpisodes] = useState<PodcastEpisode[]>([]);
+
+  const fetchPodcastEpisodes = async () => {
+    try {
+      const data = await getAllPodcasts();
+      let tmpblogs: PodcastEpisode[] = [];
+      if (Array.isArray(data)) {
+        data.map((blog: any) => {
+          tmpblogs.push({
+            id: blog.Id,
+            title: blog.Title,
+            content: blog.Body,
+            excerpt: blog.Description,
+            status: blog.Status,
+            author: blog.Author,
+            categories: [],
+            tags: [],
+            featuredImage: blog.Graphic1,
+            // publishedAt: new Date('2024-01-15'),
+            createdAt: new Date(blog.DatePublished),
+            updatedAt: new Date(blog.LastUpdated),
+            slug: blog.Relevance
+          });
+        });
+      }
+      console.log('Fetched podcast episodes:', data, tmpblogs);
+      setPodcastEpisodes(tmpblogs);
+      setFilteredEpisodes(tmpblogs);
+
+    } catch (error) {
+      console.error('Error fetching podcast episodes:', error);
     }
-  ];
+  };
+
+  useEffect(() => {
+    // Fetch podcast episodes from API
+    fetchPodcastEpisodes();
+  }, []);
+  // Mock data - replace with actual API call
+  // const podcastEpisodes: PodcastEpisode[] = [
+  //   {
+  //     id: '1',
+  //     title: 'The Future of Web Development: Trends for 2024',
+  //     description: 'Join us as we explore the latest trends and technologies shaping web development in 2024.',
+  //     audioUrl: 'https://example.com/audio/episode-1.mp3',
+  //     duration: 3420, // 57 minutes in seconds
+  //     status: 'published',
+  //     series: {
+  //       id: '1',
+  //       name: 'Tech Talk Weekly',
+  //       description: 'Weekly discussions about technology trends',
+  //       coverImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //       isActive: true,
+  //       createdAt: new Date('2023-01-01')
+  //     },
+  //     episodeNumber: 15,
+  //     seasonNumber: 2,
+  //     showNotes: 'In this episode, we discuss...',
+  //     transcript: 'Welcome to Tech Talk Weekly...',
+  //     featuredImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     publishedAt: new Date('2024-01-15T10:00:00'),
+  //     createdAt: new Date('2024-01-10'),
+  //     updatedAt: new Date('2024-01-15'),
+  //     tags: [
+  //       { id: '1', name: 'Web Development', slug: 'web-development', color: '#3B82F6', usageCount: 25, createdAt: new Date() },
+  //       { id: '2', name: 'Technology', slug: 'technology', color: '#8B5CF6', usageCount: 30, createdAt: new Date() }
+  //     ]
+  //   },
+  //   {
+  //     id: '2',
+  //     title: 'Building Scalable React Applications',
+  //     description: 'Deep dive into best practices for building large-scale React applications.',
+  //     audioUrl: 'https://example.com/audio/episode-2.mp3',
+  //     duration: 2880, // 48 minutes in seconds
+  //     status: 'draft',
+  //     series: {
+  //       id: '1',
+  //       name: 'Tech Talk Weekly',
+  //       description: 'Weekly discussions about technology trends',
+  //       coverImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //       isActive: true,
+  //       createdAt: new Date('2023-01-01')
+  //     },
+  //     episodeNumber: 16,
+  //     seasonNumber: 2,
+  //     showNotes: 'In this episode, we explore...',
+  //     featuredImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     publishedAt: undefined,
+  //     createdAt: new Date('2024-01-20'),
+  //     updatedAt: new Date('2024-01-22'),
+  //     tags: [
+  //       { id: '3', name: 'React', slug: 'react', color: '#06B6D4', usageCount: 20, createdAt: new Date() },
+  //       { id: '4', name: 'JavaScript', slug: 'javascript', color: '#F59E0B', usageCount: 35, createdAt: new Date() }
+  //     ]
+  //   },
+  //   {
+  //     id: '3',
+  //     title: 'Interview: AI in Software Development',
+  //     description: 'Exclusive interview with industry experts about AI tools in software development.',
+  //     audioUrl: 'https://example.com/audio/episode-3.mp3',
+  //     duration: 4200, // 70 minutes in seconds
+  //     status: 'published',
+  //     series: {
+  //       id: '2',
+  //       name: 'Developer Insights',
+  //       description: 'Interviews with industry professionals',
+  //       coverImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //       isActive: true,
+  //       createdAt: new Date('2023-06-01')
+  //     },
+  //     episodeNumber: 8,
+  //     seasonNumber: 1,
+  //     showNotes: 'Special interview episode...',
+  //     transcript: 'Today we have a special guest...',
+  //     featuredImage: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     publishedAt: new Date('2024-01-12T14:00:00'),
+  //     createdAt: new Date('2024-01-08'),
+  //     updatedAt: new Date('2024-01-12'),
+  //     tags: [
+  //       { id: '5', name: 'AI', slug: 'ai', color: '#8B5CF6', usageCount: 15, createdAt: new Date() },
+  //       { id: '6', name: 'Interview', slug: 'interview', color: '#10B981', usageCount: 12, createdAt: new Date() }
+  //     ]
+  //   }
+  // ];
 
   const podcastSeries = [
     { id: '1', name: 'Tech Talk Weekly' },
@@ -123,35 +165,37 @@ export const PodcastList: React.FC = () => {
     { id: '3', name: 'Startup Stories' }
   ];
 
-  const filteredEpisodes = podcastEpisodes.filter(episode => {
-    const matchesSearch = episode.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         episode.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         episode.series.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || episode.status === selectedStatus;
-    const matchesSeries = selectedSeries === 'all' || episode.series.id === selectedSeries;
-    return matchesSearch && matchesStatus && matchesSeries;
-  });
-
-  const handleSelectEpisode = (episodeId: string) => {
-    setSelectedEpisodes(prev => 
-      prev.includes(episodeId) 
-        ? prev.filter(id => id !== episodeId)
-        : [...prev, episodeId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    setSelectedEpisodes(
-      selectedEpisodes.length === filteredEpisodes.length 
-        ? [] 
-        : filteredEpisodes.map(episode => episode.id)
-    );
-  };
-
+  // const filteredEpisodes = podcastEpisodes.filter(episode => {
+  //   const matchesSearch = episode.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //                        episode.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //                        episode.series.name.toLowerCase().includes(searchQuery.toLowerCase());
+  //   const matchesStatus = selectedStatus === 'all' || episode.status === selectedStatus;
+  //   const matchesSeries = selectedSeries === 'all' || episode.series.id === selectedSeries;
+  //   return matchesSearch && matchesStatus && matchesSeries;
+  // });
+  const onhandleSearch = () => {
+    if (searchQuery.trim() === '') {
+      setSearchQuery('');
+    } else {
+      const tmpbposts = podcastEpisodes.filter(post =>
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredEpisodes(tmpbposts);
+      // setSearchQuery(searchQuery.trim());
+    }
+  }
+  const reloadPodcasts = () => {
+    setSearchQuery('');
+    setFilteredEpisodes(podcastEpisodes);
+  }
   const handleDeleteEpisode = async (episodeId: string) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      await deletePodcast(episodeId);
       console.log('Deleting episode:', episodeId);
+      fetchPodcastEpisodes();
       setDeleteDialog({ isOpen: false });
     } catch (error) {
       console.error('Error deleting episode:', error);
@@ -217,48 +261,14 @@ export const PodcastList: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="archived">Archived</option>
-            </select>
-            <select
-              value={selectedSeries}
-              onChange={(e) => setSelectedSeries(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Series</option>
-              {podcastSeries.map(series => (
-                <option key={series.id} value={series.id}>{series.name}</option>
-              ))}
-            </select>
-            <Button variant="secondary" icon={<Filter className="w-4 h-4" />}>
-              More Filters
+            <Button variant="secondary" onClick={() => { onhandleSearch() }} icon={<SearchIcon className="w-4 h-4" />}>
+              Search
             </Button>
+            <button className='bg-slate-300 p-3 rounded-lg' onClick={() => { reloadPodcasts() }}>
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        {/* Bulk Actions */}
-        {selectedEpisodes.length > 0 && (
-          <div className="mt-4 p-3 bg-indigo-50 rounded-lg flex items-center justify-between">
-            <span className="text-sm text-indigo-700">
-              {selectedEpisodes.length} episode(s) selected
-            </span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="secondary">
-                Bulk Edit
-              </Button>
-              <Button size="sm" variant="danger">
-                Delete Selected
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Episodes List */}
@@ -268,21 +278,7 @@ export const PodcastList: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={selectedEpisodes.length === filteredEpisodes.length && filteredEpisodes.length > 0}
-                    onChange={handleSelectAll}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Episode
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Series
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duration
+                  Title
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -299,95 +295,33 @@ export const PodcastList: React.FC = () => {
               {filteredEpisodes.map((episode) => (
                 <tr key={episode.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedEpisodes.includes(episode.id)}
-                      onChange={() => handleSelectEpisode(episode.id)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="relative mr-4">
                         {episode.featuredImage && (
                           <img
-                            src={episode.featuredImage}
+                            src={`${apiPath}${episode.featuredImage}`}
                             alt={episode.title}
                             className="w-12 h-12 rounded-lg object-cover"
+                            crossOrigin="anonymous"
                           />
                         )}
-                        <button
-                          onClick={() => handlePlayPause(episode.id)}
-                          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg opacity-0 hover:opacity-100 transition-opacity"
-                        >
-                          {playingEpisode === episode.id ? (
-                            <Pause className="w-4 h-4 text-white" />
-                          ) : (
-                            <Play className="w-4 h-4 text-white ml-0.5" />
-                          )}
-                        </button>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">{episode.title}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{episode.description}</p>
-                        <div className="flex items-center mt-2 space-x-2">
-                          <span className="text-xs text-gray-500">
-                            S{episode.seasonNumber}E{episode.episodeNumber}
-                          </span>
-                          {episode.tags.slice(0, 2).map(tag => (
-                            <span
-                              key={tag.id}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                              style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="flex items-center">
-                      <Headphones className="w-4 h-4 mr-2 text-gray-400" />
-                      {episode.series.name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                      {formatDuration(episode.duration)}
-                    </div>
-                  </td>
+
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(episode.status)}`}>
                       {episode.status.charAt(0).toUpperCase() + episode.status.slice(1)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {episode.publishedAt ? (
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        <div>
-                          <div>{format(episode.publishedAt, 'MMM dd, yyyy')}</div>
-                          <div className="text-xs text-gray-400">{format(episode.publishedAt, 'HH:mm')}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">Not published</span>
-                    )}
+                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                    {episode.createdAt ? format(episode.createdAt, 'yyyy-MM-dd') : ''}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => handlePlayPause(episode.id)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        <Eye className="w-4 h-4" />
-                      </button>
                       <Link
                         to={`/dashboard/podcasts/edit/${episode.id}`}
                         className="text-gray-600 hover:text-gray-900"

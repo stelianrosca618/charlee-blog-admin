@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   FileText, 
   Newspaper, 
@@ -10,77 +10,138 @@ import {
   Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getDashboardActivities, getDashboardStats } from '../hooks/useApi';
+import { formatDistanceToNow } from 'date-fns';
+
+type StatItem = {
+  name: string;
+  value: any;
+  icon: React.ElementType;
+  color: string;
+};
 
 export const Dashboard: React.FC = () => {
-  const stats = [
-    {
-      name: 'Total Posts',
-      value: '248',
-      change: '+12%',
-      changeType: 'increase',
-      icon: FileText,
-      color: 'bg-blue-500'
-    },
-    {
-      name: 'News Articles',
-      value: '89',
-      change: '+8%',
-      changeType: 'increase',
-      icon: Newspaper,
-      color: 'bg-green-500'
-    },
-    {
-      name: 'Podcast Episodes',
-      value: '34',
-      change: '+3%',
-      changeType: 'increase',
-      icon: Headphones,
-      color: 'bg-purple-500'
-    },
-    {
-      name: 'Upcoming Events',
-      value: '12',
-      change: '+2',
-      changeType: 'increase',
-      icon: Calendar,
-      color: 'bg-orange-500'
+  const [stats, setStats] = React.useState<StatItem[]>([]);
+  const [recentActivity, setRecentActivity] = React.useState<any[]>([])
+  useEffect(() => {
+    fetchData();
+    fetchActivity();
+  }, []);
+  const fetchData = async () => {
+    try {
+      const dashboardStats = await getDashboardStats();
+      console.log('Dashboard Stats:', dashboardStats);
+      // setStats(dashboardStats);
+      const tmpStats = [
+        {
+          name: 'Total Posts',
+          value: dashboardStats.blogs,
+          icon: FileText,
+          color: 'bg-blue-500'
+        },
+        {
+          name: 'News Articles',
+          value: dashboardStats.news,
+          icon: Newspaper,
+          color: 'bg-green-500'
+        },
+        {
+          name: 'Podcast Episodes',
+          value: dashboardStats.podcasts,
+          icon: Headphones,
+          color: 'bg-purple-500'
+        },
+        {
+          name: 'Upcoming Events',
+          value: dashboardStats.events,
+          icon: Calendar,
+          color: 'bg-orange-500'
+        }
+      ];
+      setStats(tmpStats);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
     }
-  ];
+  };
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: 'blog',
-      title: 'New Blog Post Published',
-      description: '"Getting Started with React Hooks" has been published',
-      time: '2 hours ago',
-      icon: FileText
-    },
-    {
-      id: 2,
-      type: 'news',
-      title: 'Breaking News Updated',
-      description: 'Updated breaking news article about tech industry',
-      time: '4 hours ago',
-      icon: Newspaper
-    },
-    {
-      id: 3,
-      type: 'podcast',
-      title: 'New Podcast Episode',
-      description: 'Episode 15: "The Future of Web Development" uploaded',
-      time: '1 day ago',
-      icon: Headphones
-    },
-    {
-      id: 4,
-      type: 'event',
-      title: 'Event Scheduled',
-      description: 'Web Development Workshop scheduled for next week',
-      time: '2 days ago',
-      icon: Calendar
+  const fetchActivity = async () => {
+    try {
+      const activities = await getDashboardActivities();
+      console.log('Dashboard Activities:', activities);
+      const tmpActivities = [
+        {
+          id: 1,
+          type: 'blog',
+          title: activities.recentBlogs.Title,
+          description: activities.recentBlogs.Description,
+          time: formatDistanceToNow(new Date(activities.recentBlogs.DateWritten), { addSuffix: true }),
+          icon: FileText
+        },
+        {
+          id: 2,
+          type: 'news',
+          title: activities.recentNews.Title,
+          description: '',
+          time: formatDistanceToNow(new Date(activities.recentNews.LastUpdated), { addSuffix: true }),
+          icon: Newspaper
+        },
+        {
+          id: 3,
+          type: 'podcast',
+          title: activities.recentPodcasts.Title,
+          description: activities.recentPodcasts.Description,
+          time: formatDistanceToNow(new Date(activities.recentPodcasts.DatePublished), { addSuffix: true }),
+          icon: Headphones
+        },
+        {
+          id: 4,
+          type: 'event',
+          title: activities.recentEvents.Title,
+          description: `${activities.recentEvents.Address} ${activities.recentEvents.City} ${activities.recentEvents.Country}`,
+          time: formatDistanceToNow(new Date(activities.recentEvents.LastUpdated), { addSuffix: true }),
+          icon: Calendar
+        }
+      ];
+      setRecentActivity(tmpActivities);
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+
     }
-  ];
+  }
+  // const recentActivity = [
+  //   {
+  //     id: 1,
+  //     type: 'blog',
+  //     title: 'New Blog Post Published',
+  //     description: '"Getting Started with React Hooks" has been published',
+  //     time: '2 hours ago',
+  //     icon: FileText
+  //   },
+  //   {
+  //     id: 2,
+  //     type: 'news',
+  //     title: 'Breaking News Updated',
+  //     description: 'Updated breaking news article about tech industry',
+  //     time: '4 hours ago',
+  //     icon: Newspaper
+  //   },
+  //   {
+  //     id: 3,
+  //     type: 'podcast',
+  //     title: 'New Podcast Episode',
+  //     description: 'Episode 15: "The Future of Web Development" uploaded',
+  //     time: '1 day ago',
+  //     icon: Headphones
+  //   },
+  //   {
+  //     id: 4,
+  //     type: 'event',
+  //     title: 'Event Scheduled',
+  //     description: 'Web Development Workshop scheduled for next week',
+  //     time: '2 days ago',
+  //     icon: Calendar
+  //   }
+  // ];
 
   return (
     <div className="space-y-6">
@@ -105,11 +166,6 @@ export const Dashboard: React.FC = () => {
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <div className="mt-4 flex items-center">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600 font-medium">{item.change}</span>
-                <span className="text-sm text-gray-500 ml-1">from last month</span>
-              </div>
             </div>
           );
         })}
@@ -121,9 +177,6 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-            <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-              View all
-            </button>
           </div>
           <div className="space-y-4">
             {recentActivity.map((activity) => {
@@ -135,7 +188,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
+                    <p className="text-sm text-gray-500 line-clamp-1">{activity.description}</p>
                     <div className="flex items-center mt-1 text-xs text-gray-400">
                       <Clock className="w-3 h-3 mr-1" />
                       {activity.time}
@@ -158,30 +211,25 @@ export const Dashboard: React.FC = () => {
                 <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">New Blog Post</span>
               </button>
             </Link>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 group">
-              <Newspaper className="w-6 h-6 text-gray-400 group-hover:text-green-600 mx-auto mb-2" />
-              <span className="text-sm font-medium text-gray-600 group-hover:text-green-600">New Article</span>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
-              <Headphones className="w-6 h-6 text-gray-400 group-hover:text-purple-600 mx-auto mb-2" />
-              <span className="text-sm font-medium text-gray-600 group-hover:text-purple-600">New Episode</span>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 group">
-              <Calendar className="w-6 h-6 text-gray-400 group-hover:text-orange-600 mx-auto mb-2" />
-              <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600">New Event</span>
-            </button>
-          </div>
-        </div>
-      </div>
+            <Link to="/dashboard/news/new">
+              <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 group">
+                <Newspaper className="w-6 h-6 text-gray-400 group-hover:text-green-600 mx-auto mb-2" />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-green-600">New News Article</span>
+              </button>
+            </Link>
+            <Link to="/dashboard/podcasts/new">
+              <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
+                <Headphones className="w-6 h-6 text-gray-400 group-hover:text-purple-600 mx-auto mb-2" />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-purple-600">New Episode</span>
+              </button>
+            </Link>
+            <Link to="/dashboard/events/new">
+              <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 group">
+                <Calendar className="w-6 h-6 text-gray-400 group-hover:text-orange-600 mx-auto mb-2" />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600">New Event</span>
+              </button>
+            </Link>
 
-      {/* Performance Chart Placeholder */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Content Performance</h2>
-        <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-500">Performance charts would be implemented here</p>
-            <p className="text-sm text-gray-400">Integration with analytics service</p>
           </div>
         </div>
       </div>

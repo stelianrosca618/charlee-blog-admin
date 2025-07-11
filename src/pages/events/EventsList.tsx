@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -13,12 +13,16 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  SearchIcon,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Event } from '../../types';
 import { format, isAfter, isBefore } from 'date-fns';
+import { apiPath, deleteEvent, getAllEvents } from '../../hooks/useApi';
+import { is } from 'date-fns/locale';
 
 export const EventsList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,97 +31,163 @@ export const EventsList: React.FC = () => {
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; eventId?: string }>({
     isOpen: false
   });
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
 
-  // Mock data - replace with actual API call
-  const events: Event[] = [
-    {
-      id: '1',
-      title: 'Web Development Workshop: React & TypeScript',
-      description: 'Comprehensive workshop covering modern React development with TypeScript.',
-      startDate: new Date('2024-02-15T09:00:00'),
-      endDate: new Date('2024-02-15T17:00:00'),
-      location: 'Tech Hub Conference Center',
-      address: '123 Innovation Drive, San Francisco, CA 94105',
-      capacity: 50,
-      registeredCount: 35,
-      status: 'upcoming',
-      categories: [{ id: '1', name: 'Workshop', slug: 'workshop', color: '#3B82F6', createdAt: new Date() }],
-      tags: [
-        { id: '1', name: 'React', slug: 'react', color: '#06B6D4', usageCount: 15, createdAt: new Date() },
-        { id: '2', name: 'TypeScript', slug: 'typescript', color: '#8B5CF6', usageCount: 12, createdAt: new Date() }
-      ],
-      featuredImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-15')
-    },
-    {
-      id: '2',
-      title: 'Annual Tech Conference 2024',
-      description: 'Join industry leaders for a day of innovation, networking, and cutting-edge technology discussions.',
-      startDate: new Date('2024-03-20T08:00:00'),
-      endDate: new Date('2024-03-22T18:00:00'),
-      location: 'Grand Convention Center',
-      address: '456 Conference Blvd, New York, NY 10001',
-      capacity: 500,
-      registeredCount: 287,
-      status: 'upcoming',
-      categories: [{ id: '2', name: 'Conference', slug: 'conference', color: '#10B981', createdAt: new Date() }],
-      tags: [
-        { id: '3', name: 'Technology', slug: 'technology', color: '#8B5CF6', usageCount: 25, createdAt: new Date() },
-        { id: '4', name: 'Networking', slug: 'networking', color: '#F59E0B', usageCount: 18, createdAt: new Date() }
-      ],
-      featuredImage: 'https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=300',
-      createdAt: new Date('2023-12-01'),
-      updatedAt: new Date('2024-01-20')
-    },
-    {
-      id: '3',
-      title: 'Design Thinking Masterclass',
-      description: 'Learn the fundamentals of design thinking and how to apply them in your projects.',
-      startDate: new Date('2024-01-10T10:00:00'),
-      endDate: new Date('2024-01-10T16:00:00'),
-      location: 'Creative Space Studio',
-      address: '789 Design Street, Los Angeles, CA 90210',
-      capacity: 25,
-      registeredCount: 25,
-      status: 'completed',
-      categories: [{ id: '3', name: 'Masterclass', slug: 'masterclass', color: '#8B5CF6', createdAt: new Date() }],
-      tags: [
-        { id: '5', name: 'Design', slug: 'design', color: '#EC4899', usageCount: 20, createdAt: new Date() },
-        { id: '6', name: 'UX/UI', slug: 'ux-ui', color: '#06B6D4', usageCount: 15, createdAt: new Date() }
-      ],
-      featuredImage: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=300',
-      createdAt: new Date('2023-12-15'),
-      updatedAt: new Date('2024-01-11')
-    },
-    {
-      id: '4',
-      title: 'Startup Pitch Competition',
-      description: 'Entrepreneurs pitch their innovative ideas to a panel of investors and industry experts.',
-      startDate: new Date('2024-04-05T13:00:00'),
-      endDate: new Date('2024-04-05T18:00:00'),
-      location: 'Innovation Hub',
-      address: '321 Startup Lane, Austin, TX 78701',
-      capacity: 100,
-      registeredCount: 45,
-      status: 'upcoming',
-      categories: [{ id: '4', name: 'Competition', slug: 'competition', color: '#EF4444', createdAt: new Date() }],
-      tags: [
-        { id: '7', name: 'Startup', slug: 'startup', color: '#10B981', usageCount: 22, createdAt: new Date() },
-        { id: '8', name: 'Investment', slug: 'investment', color: '#F59E0B', usageCount: 8, createdAt: new Date() }
-      ],
-      createdAt: new Date('2024-01-05'),
-      updatedAt: new Date('2024-01-18')
+  useEffect(() => {
+    // Mock data - replace with actual API call
+
+
+    fetchEvents();
+  }, [])
+  const fetchEvents = async () => {
+    // Simulate API call
+    const resEvents = await getAllEvents();
+    console.log('Fetched events:', resEvents);
+    const mockEvents: Event[] = resEvents.data || [];
+    if (Array.isArray(resEvents)) {
+      resEvents.map((event: any) => {
+        mockEvents.push({
+          id: event.id,
+          title: event.Title,
+          graphic1: event.Graphic1,
+          slug: event.Relevance,
+          address: event.Address,
+          country: event.Country,
+          city: event.City,
+          state: event.State,
+          zip: event.Zip,
+          phone: event.Phone,
+          startDate: new Date(event.StartDate).toDateString(),
+          endDate: event.EndDate ? new Date(event.EndDate).toDateString() : undefined,
+          status: getStatus(event),
+          lastUpdated: new Date(event.LastUpdated).toDateString(),
+          lastUpdatedBy: event.LastUpdatedBy || 'Charlee AI',
+        });
+      });
     }
-  ];
+    setEvents(mockEvents);
+    setFilteredEvents(mockEvents);
+  };
 
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         event.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || event.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const getStatus = (event: Event) => {
+    const now = new Date();
+    if (isAfter(new Date(event.startDate), now)) {
+      return 'upcoming';
+    } else {
+      return 'completed';
+    }
+    // if (isBefore(new Date(event.startDate), now)) {
+    //   return 'upcoming';
+    // } else if (event.endDate && isBefore(new Date(event.endDate), now)) {
+    //   return 'completed';
+    // } else {
+    //   return 'ongoing';
+    // }
+  }
+  // Mock data - replace with actual API call
+  // const events: Event[] = [
+  //   {
+  //     id: '1',
+  //     title: 'Web Development Workshop: React & TypeScript',
+  //     description: 'Comprehensive workshop covering modern React development with TypeScript.',
+  //     startDate: new Date('2024-02-15T09:00:00'),
+  //     endDate: new Date('2024-02-15T17:00:00'),
+  //     location: 'Tech Hub Conference Center',
+  //     address: '123 Innovation Drive, San Francisco, CA 94105',
+  //     capacity: 50,
+  //     registeredCount: 35,
+  //     status: 'upcoming',
+  //     categories: [{ id: '1', name: 'Workshop', slug: 'workshop', color: '#3B82F6', createdAt: new Date() }],
+  //     tags: [
+  //       { id: '1', name: 'React', slug: 'react', color: '#06B6D4', usageCount: 15, createdAt: new Date() },
+  //       { id: '2', name: 'TypeScript', slug: 'typescript', color: '#8B5CF6', usageCount: 12, createdAt: new Date() }
+  //     ],
+  //     featuredImage: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     createdAt: new Date('2024-01-10'),
+  //     updatedAt: new Date('2024-01-15')
+  //   },
+  //   {
+  //     id: '2',
+  //     title: 'Annual Tech Conference 2024',
+  //     description: 'Join industry leaders for a day of innovation, networking, and cutting-edge technology discussions.',
+  //     startDate: new Date('2024-03-20T08:00:00'),
+  //     endDate: new Date('2024-03-22T18:00:00'),
+  //     location: 'Grand Convention Center',
+  //     address: '456 Conference Blvd, New York, NY 10001',
+  //     capacity: 500,
+  //     registeredCount: 287,
+  //     status: 'upcoming',
+  //     categories: [{ id: '2', name: 'Conference', slug: 'conference', color: '#10B981', createdAt: new Date() }],
+  //     tags: [
+  //       { id: '3', name: 'Technology', slug: 'technology', color: '#8B5CF6', usageCount: 25, createdAt: new Date() },
+  //       { id: '4', name: 'Networking', slug: 'networking', color: '#F59E0B', usageCount: 18, createdAt: new Date() }
+  //     ],
+  //     featuredImage: 'https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     createdAt: new Date('2023-12-01'),
+  //     updatedAt: new Date('2024-01-20')
+  //   },
+  //   {
+  //     id: '3',
+  //     title: 'Design Thinking Masterclass',
+  //     description: 'Learn the fundamentals of design thinking and how to apply them in your projects.',
+  //     startDate: new Date('2024-01-10T10:00:00'),
+  //     endDate: new Date('2024-01-10T16:00:00'),
+  //     location: 'Creative Space Studio',
+  //     address: '789 Design Street, Los Angeles, CA 90210',
+  //     capacity: 25,
+  //     registeredCount: 25,
+  //     status: 'completed',
+  //     categories: [{ id: '3', name: 'Masterclass', slug: 'masterclass', color: '#8B5CF6', createdAt: new Date() }],
+  //     tags: [
+  //       { id: '5', name: 'Design', slug: 'design', color: '#EC4899', usageCount: 20, createdAt: new Date() },
+  //       { id: '6', name: 'UX/UI', slug: 'ux-ui', color: '#06B6D4', usageCount: 15, createdAt: new Date() }
+  //     ],
+  //     featuredImage: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=300',
+  //     createdAt: new Date('2023-12-15'),
+  //     updatedAt: new Date('2024-01-11')
+  //   },
+  //   {
+  //     id: '4',
+  //     title: 'Startup Pitch Competition',
+  //     description: 'Entrepreneurs pitch their innovative ideas to a panel of investors and industry experts.',
+  //     startDate: new Date('2024-04-05T13:00:00'),
+  //     endDate: new Date('2024-04-05T18:00:00'),
+  //     location: 'Innovation Hub',
+  //     address: '321 Startup Lane, Austin, TX 78701',
+  //     capacity: 100,
+  //     registeredCount: 45,
+  //     status: 'upcoming',
+  //     categories: [{ id: '4', name: 'Competition', slug: 'competition', color: '#EF4444', createdAt: new Date() }],
+  //     tags: [
+  //       { id: '7', name: 'Startup', slug: 'startup', color: '#10B981', usageCount: 22, createdAt: new Date() },
+  //       { id: '8', name: 'Investment', slug: 'investment', color: '#F59E0B', usageCount: 8, createdAt: new Date() }
+  //     ],
+  //     createdAt: new Date('2024-01-05'),
+  //     updatedAt: new Date('2024-01-18')
+  //   }
+  // ];
+
+  useEffect(() => {
+    let filtered = events;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(event =>
+        (event.title && event.title.toLowerCase().includes(q)) ||
+        (event.address && event.address.toLowerCase().includes(q)) ||
+        (event.city && event.city.toLowerCase().includes(q)) ||
+        (event.state && event.state.toLowerCase().includes(q)) ||
+        (event.country && event.country.toLowerCase().includes(q))
+      );
+    }
+
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(event => event.status === selectedStatus);
+    }
+
+    setFilteredEvents(filtered);
+  }, [events, searchQuery, selectedStatus]);
 
   const handleSelectEvent = (eventId: string) => {
     setSelectedEvents(prev => 
@@ -137,8 +207,9 @@ export const EventsList: React.FC = () => {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await deleteEvent(eventId);
       console.log('Deleting event:', eventId);
+      fetchEvents();
       setDeleteDialog({ isOpen: false });
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -169,6 +240,12 @@ export const EventsList: React.FC = () => {
         return <AlertCircle className="w-3 h-3 mr-1" />;
     }
   };
+
+  const reloadEvents = () => {
+    setFilteredEvents(events);
+    setSearchQuery('');
+    setSelectedStatus('all');
+  }
 
   const getCapacityStatus = (registered: number, capacity?: number) => {
     if (!capacity) return null;
@@ -224,11 +301,10 @@ export const EventsList: React.FC = () => {
               <option value="upcoming">Upcoming</option>
               <option value="ongoing">Ongoing</option>
               <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
             </select>
-            <Button variant="secondary" icon={<Filter className="w-4 h-4" />}>
-              More Filters
-            </Button>
+            <button className='bg-slate-300 p-3 rounded-lg' onClick={() => { reloadEvents() }}>
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -256,25 +332,17 @@ export const EventsList: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={selectedEvents.length === filteredEvents.length && filteredEvents.length > 0}
-                    onChange={handleSelectAll}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Event
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
+                  Start Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  End Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Capacity
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -286,40 +354,22 @@ export const EventsList: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEvents.map((event) => {
-                const capacityStatus = getCapacityStatus(event.registeredCount, event.capacity);
+                // const capacityStatus = getCapacityStatus(event.registeredCount, event.capacity);
                 return (
                   <tr key={event.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedEvents.includes(event.id)}
-                        onChange={() => handleSelectEvent(event.id)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center">
-                        {event.featuredImage && (
+                        {event.graphic1 && (
                           <img
-                            src={event.featuredImage}
+                            src={`${apiPath}${event.graphic1}`}
                             alt={event.title}
                             className="w-12 h-12 rounded-lg object-cover mr-4"
+                            crossOrigin="anonymous"
                           />
                         )}
                         <div>
                           <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
-                          <p className="text-sm text-gray-500 mt-1">{event.description}</p>
-                          <div className="flex items-center mt-2 space-x-2">
-                            {event.categories.map(category => (
-                              <span
-                                key={category.id}
-                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                                style={{ backgroundColor: category.color + '20', color: category.color }}
-                              >
-                                {category.name}
-                              </span>
-                            ))}
-                          </div>
+                          <p className="text-sm text-gray-500 mt-1">{event.slug}</p>
                         </div>
                       </div>
                     </td>
@@ -327,9 +377,18 @@ export const EventsList: React.FC = () => {
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                         <div>
-                          <div>{format(event.startDate, 'MMM dd, yyyy')}</div>
-                          <div className="text-xs text-gray-500">
-                            {format(event.startDate, 'HH:mm')} - {format(event.endDate, 'HH:mm')}
+                          <div>{format(new Date(event.startDate), 'MMM dd, yyyy')}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        <div>
+                          <div>
+                            {event.endDate
+                              ? format(new Date(event.endDate), 'MMM dd, yyyy')
+                              : 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -338,24 +397,8 @@ export const EventsList: React.FC = () => {
                       <div className="flex items-center">
                         <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                         <div>
-                          <div>{event.location}</div>
                           {event.address && (
                             <div className="text-xs text-gray-500">{event.address}</div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex items-center">
-                        <Users className="w-4 h-4 mr-2 text-gray-400" />
-                        <div>
-                          <div className="text-gray-900">
-                            {event.registeredCount}{event.capacity && `/${event.capacity}`}
-                          </div>
-                          {capacityStatus && (
-                            <div className={`text-xs ${capacityStatus.color}`}>
-                              {capacityStatus.label}
-                            </div>
                           )}
                         </div>
                       </div>
@@ -368,9 +411,7 @@ export const EventsList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        <button className="text-indigo-600 hover:text-indigo-900">
-                          <Eye className="w-4 h-4" />
-                        </button>
+
                         <Link
                           to={`/dashboard/events/edit/${event.id}`}
                           className="text-gray-600 hover:text-gray-900"

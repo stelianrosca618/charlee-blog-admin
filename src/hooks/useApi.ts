@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { useState, useCallback } from 'react';
 
-export const apiPath = 'http://localhost:4000';
+// export const apiPath = 'http://localhost:4000';
+export const apiPath = 'https://charleenode.duckdns.org'
 export interface ApiState<T> {
   data: T | null;
   loading: boolean;
@@ -61,6 +62,28 @@ export const imageUpload = async (file: File) => {
     throw new Error('Image upload failed');
   }
 };
+
+export const getDashboardStats = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.log('Get dashboard stats error:', error);
+    throw new Error('Failed to fetch dashboard stats');
+
+  }
+}
+
+export const getDashboardActivities = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/dashboard/getActivites`);
+    return response.data;
+  } catch (error) {
+    console.log('Get dashboard activities error:', error);
+    throw new Error('Failed to fetch dashboard activities');
+
+  }
+}
 
 export const createBlog = async (data: any) => {
   try {
@@ -163,6 +186,104 @@ export const getAllNews = async () => {
     throw new Error('Get all News failed');
   }
 }
+
+export const createPodcast = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/podcasts`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Create podcast error:', error);
+    throw new Error('Create podcast failed');
+  }
+}
+export const updatePodcast = async (id: string, data: any) => {
+  try {
+    const response = await axios.put(`${apiPath}/api/podcasts/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Update podcast error:', error);
+    throw new Error('Update podcast failed');
+  }
+}
+export const deletePodcast = async (id: string) => {
+  try {
+    const response = await axios.delete(`${apiPath}/api/podcasts/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Delete podcast error:', error);
+    throw new Error('Delete podcast failed');
+  }
+}
+export const getAllPodcasts = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/podcasts`);
+    return response.data;
+  } catch (error) {
+    console.log('Get all podcasts error:', error);
+    throw new Error('Get all podcasts failed');
+  }
+}
+export const getPodcastById = async (id: string) => {
+  try {
+    const response = await axios.get(`${apiPath}/api/podcasts/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Get podcast by ID error:', error);
+    throw new Error('Get podcast by ID failed');
+  }
+}
+
+export const createEvent = async (data: any) => {
+  try {
+    const response = await axios.post(`${apiPath}/api/events`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Create event error:', error);
+    throw new Error('Create event failed');
+  }
+}
+
+export const updateEvent = async (id: string, data: any) => {
+  try {
+    const response = await axios.put(`${apiPath}/api/events/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.log('Update event error:', error);
+    throw new Error('Update event failed');
+  }
+}
+
+export const getAllEvents = async () => {
+  try {
+    const response = await axios.get(`${apiPath}/api/events`);
+    return response.data;
+  } catch (error) {
+    console.log('Get all events error:', error);
+    throw new Error('Get all events failed');
+  }
+}
+
+export const getEventById = async (id: string) => {
+  try {
+    const response = await axios.get(`${apiPath}/api/events/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Get event by ID error:', error);
+    throw new Error('Get event by ID failed');
+  }
+}
+
+export const deleteEvent = async (id: string) => {
+  try {
+    const response = await axios.delete(`${apiPath}/api/events/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log('Delete event error:', error);
+    throw new Error('Delete event failed');
+
+  }
+}
+
 export const useApi = <T>() => {
   const [state, setState] = useState<ApiState<T>>({
     data: null,
