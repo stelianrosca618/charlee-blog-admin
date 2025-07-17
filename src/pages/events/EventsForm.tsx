@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import HouseOutlinedIcon from '@mui/icons-material/HouseOutlined';
 import { 
   Save, 
   Eye, 
@@ -19,6 +20,20 @@ import {
 import { Button } from '../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { apiPath, createEvent, getEventById, imageUpload, updateEvent } from '../../hooks/useApi';
+import RoomIcon from '@mui/icons-material/Room';
+import PhoneSharpIcon from '@mui/icons-material/PhoneSharp';
+import { Container } from '@mui/material';
+// import { Map, Marker, ApiProvider } from "@vis.gl/react-google-maps";
+import GoogleMapReact from 'google-map-react';
+import {
+  geocode,
+  GeocodeOptions,
+  RequestType,
+} from "react-geocode";
+import { CalendarDownMenu } from '../../components/func/CalendarDownMenu';
+import { CalendarEventObj } from '../../hooks/commonFunc';
+
+
 
 interface EventFormData {
   title: string;                // Title (mediumtext, NOT NULL)
@@ -40,6 +55,7 @@ interface EventFormData {
 
 export const EventsForm: React.FC = () => {
   const { id } = useParams();
+  const [isPreview, setIsPreview] = useState(false);
   const navigate = useNavigate();
   const isEditing = Boolean(id);
   const [showSeoOptions, setShowSeoOptions] = useState(false);
@@ -66,6 +82,52 @@ export const EventsForm: React.FC = () => {
       lastUpdatedBy: ''
     }
   });
+  const [markerLocation, setMarkerLocation] = useState({
+    center: {
+      lat: 51.509865,
+      lng: -0.118092,
+    },
+    zoom: 11
+  });
+
+  const loadLocation = (address: string) => {
+    geocode(RequestType.ADDRESS, address, {
+      key: "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao",
+      language: "en",
+      region: "us",
+    } as GeocodeOptions)
+      .then((response) => {
+        const { lat, lng } = response.results[0].geometry.location;
+        setMarkerLocation({ center: {
+            lat: lat,
+            lng: lng
+          },
+          zoom: 11 });
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+  }
+
+  const printEventDates = (eventStartDate: any, eventEndDate: any) => {
+    const startDate = new Date(eventStartDate);
+    const startDateStr = startDate.toLocaleDateString(undefined,
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }
+    );
+    const endDate = new Date(eventEndDate)
+    const endDateStr = endDate.toLocaleDateString(undefined,
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }
+    );
+    return `${startDateStr} - ${endDateStr}`;
+  }
 
   useEffect(() => {
     if (isEditing) {
@@ -180,7 +242,15 @@ export const EventsForm: React.FC = () => {
   };
 
   const handlePreview = () => {
-    window.open(`/preview/event/${id || 'new'}`, '_blank');
+
+    if (!isPreview) {
+      const addressStr = `${watch('address')}, ${watch('city')}, ${watch('state')}, ${watch('zip')}, ${watch('country')}`;
+      loadLocation(addressStr);
+
+    }
+    setIsPreview(isPreview => !isPreview);
+
+    // window.open(`/preview/event/${id || 'new'}`, '_blank');
   };
 
 
@@ -202,7 +272,7 @@ export const EventsForm: React.FC = () => {
             onClick={handlePreview}
             icon={<Eye className="w-4 h-4" />}
           >
-            Preview
+            {isPreview ? 'Hide Preview' : 'Show Preview'}
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
@@ -213,7 +283,101 @@ export const EventsForm: React.FC = () => {
           </Button>
         </div>
       </div>
-
+      {isPreview ?
+        <div className='w-full'>
+          <Container maxWidth="md">
+            <div className='w-full'>
+              <div className='relative w-full'>
+                {featuredImagePreview && (
+                  <img
+                    src={`${apiPath}${featuredImagePreview}`}
+                    alt="Event Preview"
+                    className="w-full aspect-[300/200] rounded-2xl shadow-md mb-4"
+                    crossOrigin="anonymous"
+                  />
+                )}
+                <div className='absolute bottom-0 w-full bg-gradient-to-t from-[#22c0b1] via-[#22c0b1] to-[#ffffff00] py-9 px-4 rounded-b-2xl'>
+                  <h4 className="cursor-pointer text-[42px] leading-[54.6px] text-white text-center">
+                    <span className="font-bold">{watch('title')}</span>
+                  </h4>
+                  <h4 className="cursor-pointer text-[42px] leading-[54.6px] text-white text-center">
+                    <span className="font-medium">{printEventDates(watch('startDate'), watch('endDate'))}</span>
+                  </h4>
+                </div>
+              </div>
+              <div className='w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
+                <div className='col-span-1'>
+                  <div className="w-full h-[300px] mb-7">
+                    <GoogleMapReact
+                      bootstrapURLKeys={{ key: "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao" }}
+                      defaultCenter={markerLocation.center}
+                      defaultZoom={markerLocation.zoom}
+                    >
+                      <div
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          backgroundColor: '#22c0b1',
+                          borderRadius: '50%',
+                          textAlign: 'center',
+                          lineHeight: '30px',
+                          color: '#fff'
+                        }}
+                      >
+                        <RoomIcon />
+                      </div>
+                    </GoogleMapReact>
+                    
+                  </div>
+                  {/* Define eventData for preview */}
+                  <CalendarDownMenu eventObj={{
+                    title: watch('title'),
+                    address: watch('address'),
+                    country: watch('country'),
+                    city: watch('city'),
+                    state: watch('state'),
+                    zip: watch('zip'),
+                    eventStartDate: watch('startDate') ? new Date(watch('startDate')) : undefined,
+                    eventEndDate: watch('endDate') ? new Date(watch('endDate') as string) : undefined,
+                    slug: watch('slug'),
+                    status: watch('status'),
+                    lastUpdated: watch('lastUpdated'),
+                    lastUpdatedBy: watch('lastUpdatedBy')
+                  } as CalendarEventObj} />
+                </div>
+                <div className='col-span-2'>
+                  <h3 className="text-[22px] font-semibold py-2">
+                    <HouseOutlinedIcon className="mx-2" />
+                    WebSite
+                  </h3>
+                  <p className="pl-2">
+                    <a className="break-words underline text-[#22c0b1]" href={watch('event_path')} target="_blank" rel="noopener noreferrer">
+                      {watch('event_path')}
+                    </a>
+                  </p>
+                  <h3 className="text-[22px] font-semibold py-2">
+                    <RoomIcon className="mx-2" />
+                    Address
+                  </h3>
+                  <p className="pl-2 underline">
+                    {watch('address')}
+                  </p>
+                  <p className="pl-2 underline">
+                    {watch('city')} {watch('state')} {watch('zip')} {watch('country')}
+                  </p>
+                  <h3 className="text-[22px] font-semibold py-2">
+                    <PhoneSharpIcon className="mx-2" />
+                    Phone
+                  </h3>
+                  <p className="pl-2 underline">
+                    {watch('phone') ? watch('phone') : 'No phone number provided'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Container>
+        </div>
+        : 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
@@ -429,6 +593,7 @@ export const EventsForm: React.FC = () => {
           </div>
         </div>
       </form>
+      }
     </div>
   );
 };
