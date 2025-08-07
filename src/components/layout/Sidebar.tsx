@@ -6,9 +6,6 @@ import {
   Newspaper, 
   Headphones, 
   Calendar, 
-  Tags, 
-  FolderOpen,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight
